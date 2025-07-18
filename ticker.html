@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>CCTV Ticker with Local Time</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@700&display=swap');
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #e0e3e7;
+      font-family: 'Roboto Condensed', sans-serif;
+      font-weight: bold;
+    }
+
+    #ticker-wrapper {
+      display: flex;
+      align-items: center;
+      height: 44px;
+      border-top: 2px solid #c0c3c6;
+      border-bottom: 2px solid #c0c3c6;
+      box-shadow: inset 0 1px #fff, inset 0 -1px #ccc;
+      background: linear-gradient(to bottom, #f9fafa, #dce1e5);
+      color: #111;
+      font-size: 18px;
+      overflow: hidden;
+    }
+
+    #time-block {
+      background: #FFD700;
+      color: white;
+      padding: 0 16px;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex: 0 0 110px;
+    }
+
+    #scroll-container {
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    #ticker {
+      display: inline-flex;
+      gap: 40px;
+      padding-left: 100%;
+      animation: scroll-left 25s linear infinite;
+      white-space: nowrap;
+      align-items: center;
+    }
+
+    @keyframes scroll-left {
+      0%   { transform: translateX(0); }
+      100% { transform: translateX(-100%); }
+    }
+
+    .item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 220px;
+    }
+
+    .name {
+      color: #002244;
+    }
+
+    .price {
+      font-weight: bold;
+    }
+
+    .up {
+      color: #c00000;
+    }
+
+    .down {
+      color: #008000;
+    }
+  </style>
+</head>
+<body>
+  <div id="ticker-wrapper">
+    <div id="time-block">--:-- 周--</div>
+    <div id="scroll-container">
+      <div id="ticker">
+        <div class="item"><span class="name">BTC/USD</span><span class="price" id="btc">$--</span><span id="btc-change" class="">--</span></div>
+        <div class="item"><span class="name">ETH/USD</span><span class="price" id="eth">$--</span><span id="eth-change" class="">--</span></div>
+        <div class="item"><span class="name">BNB/USD</span><span class="price" id="bnb">$--</span><span id="bnb-change" class="">--</span></div>
+        <div class="item"><span class="name">SOL/USD</span><span class="price" id="sol">$--</span><span id="sol-change" class="">--</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function updateTime() {
+      const now = new Date();
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const days = ['日','一','二','三','四','五','六'];
+      const day = days[now.getDay()];
+      document.getElementById("time-block").textContent = `${hours}:${minutes} 周${day}`;
+    }
+    updateTime();
+    setInterval(updateTime, 60000);
+
+    async function fetchPrices() {
+      try {
+        const res = await fetch("https://api.binance.com/api/v3/ticker/24hr");
+        const data = await res.json();
+        const find = s => data.find(i => i.symbol === s);
+        const get = s => find(s);
+        const fmt = n => Number(n).toLocaleString("en-US", {maximumFractionDigits: 2});
+
+        const pairs = {
+          BTCUSDT: 'btc',
+          ETHUSDT: 'eth',
+          BNBUSDT: 'bnb',
+          SOLUSDT: 'sol',
+        };
+
+        for (const symbol in pairs) {
+          const id = pairs[symbol];
+          const info = get(symbol);
+          const price = fmt(info.lastPrice);
+          const change = parseFloat(info.priceChange).toFixed(2);
+          const isUp = parseFloat(change) >= 0;
+          document.getElementById(id).textContent = `$${price}`;
+          const changeEl = document.getElementById(id + "-change");
+          changeEl.textContent = `${isUp ? '▲' : '▼'} ${Math.abs(change)}`;
+          changeEl.className = isUp ? 'up' : 'down';
+        }
+      } catch (e) {
+        console.error("Price fetch error", e);
+      }
+    }
+
+    fetchPrices();
+    setInterval(fetchPrices, 60000);
+  </script>
+</body>
+</html>
